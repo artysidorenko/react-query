@@ -607,6 +607,50 @@ describe('useQueries', () => {
     // @ts-expect-error (Page component is not rendered)
     // eslint-disable-next-line
     function Page() {
+      // Rejects queryFn that returns/resolved to undefined
+      // @ts-expect-error (queryFn must not return undefined)
+      useQueries({ queries: [{ queryKey: key1, queryFn: () => undefined }] })
+      useQueries({
+        queries: [
+          // @ts-expect-error (queryFn must not return undefined)
+          { queryKey: key2, queryFn: () => Promise.resolve(undefined) },
+        ],
+      })
+      useQueries({
+        // @ts-expect-error (queryFn must not return undefined)
+        queries: Array(50).map((_, i) => ({
+          queryKey: ['key', i] as const,
+          queryFn: () => Promise.resolve(undefined),
+        })),
+      })
+
+      // Rejects queryFn that always throws
+      useQueries({
+        queries: [
+          // @ts-expect-error (queryFn must not return undefined)
+          {
+            queryKey: key3,
+            queryFn: async () => {
+              throw new Error('')
+            },
+          },
+        ],
+      })
+      // Accepts queryFn that *sometimes* throws
+      useQueries({
+        queries: [
+          {
+            queryKey: key3,
+            queryFn: async () => {
+              if (Math.random() > 0.1) {
+                throw new Error('')
+              }
+              return 'result'
+            },
+          },
+        ],
+      })
+
       // Array.map preserves TQueryFnData
       const result1 = useQueries({
         queries: Array(50).map((_, i) => ({
