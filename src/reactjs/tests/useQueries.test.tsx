@@ -640,7 +640,7 @@ describe('useQueries', () => {
       useQueries({
         queries: [
           {
-            queryKey: key3,
+            queryKey: key4,
             queryFn: async () => {
               if (Math.random() > 0.1) {
                 throw new Error('')
