@@ -23,7 +23,7 @@ import {
   UseQueryOptions,
   QueryKey,
 } from '../..'
-import { QueryFunctionContext } from '../../core'
+import { QueryFunctionContext, TQueryFnReturn } from '../../core'
 
 describe('useQueries', () => {
   const queryCache = new QueryCache()
@@ -921,7 +921,7 @@ describe('useQueries', () => {
     type SelectorB = (data: string) => [string, number]
     const getSelectorB = (): SelectorB => data => [data, +data]
 
-    // Wrapper with strongly typed array-parameter
+    // Wrapper with parameter type matches original useQueries
     function useWrappedQueries<
       TQueryFnData,
       TError,
@@ -946,6 +946,35 @@ describe('useQueries', () => {
             }
           }
         ),
+      })
+    }
+
+    // Wrapper with custom parameter type
+    function useQueryFactory<
+      TQueryKey extends [string, Record<string, unknown>?],
+      TQueryFnData,
+      TError,
+      TData = TQueryFnData
+    >(
+      queries: {
+        qk: TQueryKey
+        // FIXME: wrapping with TQueryFnReturn is not sufficient to associate mapped query to useQueries param!
+        fetcher: (
+          obj: TQueryKey[1],
+          token: string
+        ) => TQueryFnReturn<TQueryFnData>
+        options?: Omit<
+          UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+          'queryKey' | 'queryFn'
+        >
+      }[]
+    ) {
+      return useQueries({
+        queries: queries.map(q => ({
+          queryKey: q.qk,
+          queryFn: () => q.fetcher(q.qk[1], 'token'),
+          ...q.options,
+        })),
       })
     }
 
