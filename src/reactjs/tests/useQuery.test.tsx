@@ -18,6 +18,8 @@ import {
   QueryCache,
   QueryFunction,
   QueryFunctionContext,
+  UseQueryOptions,
+  TQueryFnReturn,
 } from '../..'
 import { ErrorBoundary } from 'react-error-boundary'
 
@@ -137,6 +139,50 @@ describe('useQuery', () => {
         queryKey: ['1'],
         queryFn: getMyDataStringKey,
       })
+
+      // it should handle query-functions that return Promise<any>
+      useQuery(key, () =>
+        fetch('return Promise<any>').then(resp => resp.json())
+      )
+
+      // handles wrapped queries but requires TQueryFnReturn helper to assure result is not void
+      const useWrappedQuery = <
+        TQueryKey extends [string, Record<string, unknown>?],
+        TQueryFnData,
+        TError,
+        TData = TQueryFnData
+      >(
+        qk: TQueryKey,
+        fetcher: (
+          obj: TQueryKey[1],
+          token: string
+          // return type must be wrapped with TQueryFnReturn
+        ) => TQueryFnReturn<TQueryFnData>,
+        options?: Omit<
+          UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+          'queryKey' | 'queryFn'
+        >
+      ) => useQuery(qk, () => fetcher(qk[1], 'token'), options)
+      const test = useWrappedQuery([''], async () => '1')
+      expectType<string | undefined>(test.data)
+
+      // fetcher can be passed directly into useQuery
+      const useWrappedFuncStyleQuery = <
+        TQueryKey extends [string, Record<string, unknown>?],
+        TQueryFnData,
+        TError,
+        TData = TQueryFnData
+      >(
+        qk: TQueryKey,
+        // return type must be wrapped with TQueryFnReturn
+        fetcher: () => TQueryFnReturn<TQueryFnData>,
+        options?: Omit<
+          UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+          'queryKey' | 'queryFn'
+        >
+      ) => useQuery(qk, fetcher, options)
+      const testFuncStyle = useWrappedFuncStyleQuery([''], async () => true)
+      expectType<boolean | undefined>(testFuncStyle.data)
     }
   })
 

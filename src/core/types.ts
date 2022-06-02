@@ -8,16 +8,21 @@ import { Logger } from './logger'
 
 export type QueryKey = readonly unknown[]
 
+/**
+ * Ensure that TQueryFnData cannot be undefined | void
+ */
+export type TQueryFnReturn<TQueryFnData = unknown> = [TQueryFnData] extends [
+  Promise<any>
+]
+  ? TQueryFnData | Promise<TQueryFnData>
+  : [TQueryFnData] extends [undefined] | [void]
+  ? never | 'queryFn must not return undefined or void'
+  : TQueryFnData | Promise<TQueryFnData>
+
 export type QueryFunction<
-  T = unknown,
+  TQueryFnData = unknown,
   TQueryKey extends QueryKey = QueryKey
-> = (
-  context: QueryFunctionContext<TQueryKey>
-) => [T] extends [undefined]
-  ? never | 'queryFn must not return undefined or void'
-  : [T] extends [void]
-  ? never | 'queryFn must not return undefined or void'
-  : T | Promise<T>
+> = (context: QueryFunctionContext<TQueryKey>) => TQueryFnReturn<TQueryFnData>
 
 export interface QueryFunctionContext<
   TQueryKey extends QueryKey = QueryKey,
