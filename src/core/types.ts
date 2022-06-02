@@ -8,16 +8,40 @@ import { Logger } from './logger'
 
 export type QueryKey = readonly unknown[]
 
+/**
+ * Any function that returns or resolves to *something*
+ */
+type GenericFunction<TResult = unknown, TArgs extends unknown[] = []> = ((
+  ...args: TArgs
+) => TResult | Promise<TResult>)
+
+/**
+ * Any function that returns or resolves to a defined value i.e. not void | undefined
+ */
+export type NonVoidFunction<
+  TResult = unknown,
+  TArgs extends unknown[] = unknown[]
+> =
+// must always be able to return Promise<any>
+GenericFunction<TResult, TArgs> extends GenericFunction<Promise<any>, TArgs> ? GenericFunction<TResult, TArgs> :
+// must never return undefined / void / Promise<undefined> / Promise<void>
+GenericFunction<TResult, TArgs> extends GenericFunction<undefined | void, TArgs>
+? never
+: GenericFunction<TResult, TArgs>
+
+/**
+ * Verify that provided function returns or resolves to a defined value i.e. not void | undefined
+ */
+export type NonVoid<TFunc extends (...args: any[]) => any> =
+  TFunc extends (...args: infer TArgs) => Promise<infer TResult> | infer TResult ?
+  TArgs extends [] ? NonVoidFunction<TResult, any> :
+  NonVoidFunction<TResult, TArgs> : never
+
+
 export type QueryFunction<
-  T = unknown,
+  TQueryFnData = unknown,
   TQueryKey extends QueryKey = QueryKey
-> = (
-  context: QueryFunctionContext<TQueryKey>
-) => [T] extends [undefined]
-  ? never | 'queryFn must not return undefined or void'
-  : [T] extends [void]
-  ? never | 'queryFn must not return undefined or void'
-  : T | Promise<T>
+> = NonVoidFunction<TQueryFnData, [QueryFunctionContext<TQueryKey>]>
 
 export interface QueryFunctionContext<
   TQueryKey extends QueryKey = QueryKey,
